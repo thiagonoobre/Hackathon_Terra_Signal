@@ -23,30 +23,67 @@
 - [x] Validar acesso ao Databricks Free Edition (notebook, catálogo, MLflow) #infra (due 11/07)
 - [x] Definir convenção de branches (ex: feat/eda, feat/model, docs/slides) #infra (due 11/07)
 - [x] Configurar .gitignore (ignorar *.csv grandes, mlruns/, .ipynb_checkpoints/) #infra (due 11/07)
+- [x] Dividir as tarefas restantes entre os integrantes (definir responsável por item) #infra (due 11/08)
+- [ ] Escrever documento de propósito: objetivo, pergunta principal e escopo (priorizar o que foi pedido, curiosidade fica para depois) #infra (due 11/09)
+- [x]  Subir a ata/resumo da reunião de 11/07 no GitHub (.md) #infra (due 11/08)
+
 
 ### 1. Dados
 
 - [x] Carregar `history.csv` e `inference.csv `no workspace #data (due 11/07)
-- [ ] EDA inicial: shape, tipos, missing, distribuição do target Churn #data (due 11/07)
+- [x] EDA inicial: shape, tipos, missing, distribuição do target Churn #data (due 11/07)
+    - **Achados preliminares (Bruno)**: contrato mensal ~50% de churn vs. 2 anos quase nenhum; clientes novos churnam mais; uma forma de pagamento com churn maior; gênero, idoso e parceiro sem diferença relevante
 - [ ] Tratar TotalCharges (valores em branco/string) #data (due 11/07)
-- [ ] Tratar categóricas (One-Hot ou Target Encoding) #data (due 11/08)
+    - **Decisão pendente**: imputar (média ou regressão) vs. manter só uma entre TotalCharges/tenure; remover linhas NÃO é opção (em produção todo cliente precisa de score)
+- [ ] Investigar divergência de linhas vs. slide introdutório (history 5634/5912, inference 1409/1461) e confirmar com os organizadores #data (due 11/08)
+- [ ] Verificar sobreposição de clientes entre `history.csv` e `inference.csv` #data (due 11/08)
+- [ ] Inspecionar `inference.csv` atrás de "pegadinhas" (grafias, categorias novas, nulos que não existem no treino) #data (due 11/08)
+    - Existe a variável `CustomerFeedback`, que contém explicações como "decided to cancel"; isso indica que a **variável está vazada** e não deve ser usada para prever o modelo.
+    - Todas as demais colunas estão presentes e sem novas categorias.
+- [x] Corrigir grafia de PhoneService (Yes/No/yes/no) e converter para binário #data (due 11/08)
+- [ ] Tratar os 19 "unknown" de `tenure` (checar se coincidem com os nulos de TotalCharges antes de usar regressão: risco de imputar uma pela outra) #data (due 11/08)
+- [ ] Checar multicolinearidade TotalCharges × tenure (correlação ~0.82-0.84) e decidir manter uma ou as duas (comparar no modelo) #data (due 11/08)
+- [x] Tratar categóricas (One-Hot ou Target Encoding) #data (due 11/08)
+    - Criar flags binárias has_internet e has_phone; tratar "No internet service" / "No phone service" como "No" nas colunas de serviços; fazer drop de uma dummy (checar se "No phone service" existe em MultipleLines)
 - [ ] Processar CustomerFeedback (TF-IDF + SVD ou features simples) #data (due 11/08)
+    - **Alternativa simples**: ler amostra, criar grupos por palavra-chave (ex: "caro") e/ou análise de sentimento
+    - [ ] Teste de vazamento do `CustomerFeedback`: taxa de frases de saída/permanência em history (por `TargetChurn`) vs. inference (SQL) + AUC de modelo só-texto #data (due 11/08)
+    - [ ] Documentar no README e em 1 slide: `CustomerFeedback` fora do modelo de churn (vazamento: o comentário descreve o desfecho e não existiria para um cliente real no momento da ligação) #data (due 11/08)
+    - [ ] Extrair temas dos comentários (preço/valor, concorrente, forma de pagamento, mudança de endereço, qualidade) e comparar churners vs. stayers; separar motivos acionáveis de não acionáveis; validar cada tema contra as colunas estruturadas e ler ~30 comentários por tema #data (due 11/09)
+    - [ ] Avaliar usar o texto para preencher os "unknown" de `tenure`: comparar tenure/`MonthlyCharges` citados no texto com as colunas onde ambos existem; só usar se concordarem #data (due 11/08)
 - [ ] Split treino/validação estratificado + pipeline reprodutível (sklearn Pipeline) #data (due 11/08)
+    - Imputação calculada só com dados de treino; regra padrão para nulos na inferência (numéricas: média/zero; categóricas: moda); mesmo código para treino e inferência
+- [ ] Checar desbalanceamento do target e decidir se/como balancear #data (due 11/08)
+- [ ] Verificar se existe dicionário de dados; se não, montar um (ex: significado de DSL/fibra, "unknown") #data (due 11/08)
+- [ ] Consolidar perguntas e enviar ao Prof (nulos de TotalCharges, "unknown" em tenure, por que clientes ficam no plano mensal, dicionário de dados, divergência de linhas, se o `CustomerFeedback` da inferência deveria declarar o desfecho) #data (due 11/09)
 
 ### 2. Modelagem
 
 - [ ] Baseline: Logistic Regression + métricas (AUC, Recall, F1) #model (due 11/07)
+    - Meta da reunião: ao menos um modelo com treino/teste/validação pronto até 11/08
 - [ ] Modelo principal: LightGBM (ou XGBoost CPU) com CV estratificada #model (due 11/08)
+- [ ] Decidir tenure contínuo vs. grupos (novo/médio/antigo) e se haverá modelos separados por tempo de casa #model (due 11/08)
+- [ ] Confirmar métricas de seleção (AUC, Recall, F1) e política de corte (threshold, top-N ou prob. > 90%) com o time #model (due 11/08)
 - [ ] Ajuste de threshold focado em Recall (justificar custo de falso negativo)  #model (due 11/08)
 - [ ] Registrar experimentos no MLflow (parâmetros, métricas, artefato do modelo)  #model (due 11/08)
+- [ ] Salvar o pipeline completo (pré-processamento + modelo) como um único artefato no MLflow, reutilizado pelo `prediction.csv` e pelo App #model (due 11/09)
+- [ ] Rodar primeiro modelo com todas as variáveis e podar depois (coeficientes/significância/importância) #model (due 11/09)
 - [ ] Análise de feature importance + interpretação de negócio  #model (due 11/09)
+- [ ] Explicação por cliente (principais drivers do score: coeficientes/SHAP) para indicar "sobre o que" vem o risco, sem usar o texto #model (due 11/10)
+- [ ] Análises estatísticas de apoio (associação churn × contrato, tempo de casa, forma de pagamento; qui-quadrado/correlações) #model (due 11/09)
+- [ ] Redigir recomendações de negócio de retenção: onde atuar e em quais perfis (ex: incentivar planos longos; não oferecer grandes descontos a quem já tem prob. muito alta) #model (due 11/10)
 - [ ] (nice-to-have) Comparar com modelo alternativo (ex: Random Forest) #model nice-to-have (due 11/10)
+- [ ] Documentar justificativa da escolha do modelo final (comparar métricas, não só acurácia; mostrar que os demais foram testados) #model (due 11/10)
+
 
 ### 3. Entrega Técnica
 
-- [ ] Gerar prediction.csv a partir de `inference.csv` #delivery (due 11/09)
-- [ ] Validar formato do prediction.csv (colunas esperadas, sem NaN, probabilidades em [0,1]) #delivery (due 11/09)
+- [ ] Gerar `prediction.csv` a partir de `inference.csv`: probabilidade de churn por cliente (permite testar cortes diferentes depois) #delivery (due 11/09)
+- [ ] Validar formato do `prediction.csv` (colunas esperadas, mesmo número de linhas e IDs da `inference.csv`, sem NaN, probabilidades em [0,1]) #delivery (due 11/09)
 - [ ] Subir `prediction.csv` no repo (ou link no README) #delivery (due 11/09)
+- [ ] Definir escopo mínimo do App: selecionar cliente existente (prob. + recomendação) vs. input manual de features #delivery (due 11/08)
+- [ ] Desenhar regras de recomendação por faixa de probabilidade e tempo de casa (o que o atendente deve oferecer) #delivery (due 11/09)
+- [ ] Salvar probabilidades da base de inferência em tabela para alimentar o App #delivery (due 11/09)
 - [ ] Construir Databricks App (Streamlit/Gradio): input de features → output probabilidade + sugestão de retenção #delivery (due 11/10)
 - [ ] Testar App no Free Edition (confirmar que sobe e responde) #delivery (due 11/10)
 - [ ] (fallback) Notebook com widgets interativos caso o App falhe #delivery (due 11/10)
@@ -66,7 +103,7 @@
 ### 5. Submissão
 
 - [ ] Revisar estrutura do repo (pastas, README, notebooks limpos) #infra (due 11/12)
-- [ ] Garantir todos os commits antes de 13/11 02:00 #infra (due 11/12)
+- [ ] Garantir todos os commits antes de ==12/11 23:59== #infra (due 11/12)
 - [ ] Preencher Google Forms com link do repo + `prediction.csv` #infra (due 11/12)
 - [ ] Confirmar submissão (print/screenshot do Forms enviado) #infra (due 11/12)
 
@@ -77,7 +114,38 @@
 
 > Q = Question |  A = Answer | D = Decision
 
-### 2026-11-07
+### Revisão do plano: 2026-11-08
+
+- D: `CustomerFeedback_adj` tratado como **vazamento**: nos exemplos, o comentário declara o desfecho ("decided to churn", "recently canceled" vs. "no plans to switch") e repete dados tabulares (tenure, `MonthlyCharges`, pagamento, internet, contrato). Um comentário (provavelmente da inferência) também declara o cancelamento. Fica fora do modelo de churn e do App; uso apenas descritivo (temas/motivos).
+    - A confirmar com SQL: taxa de frases de saída/permanência por dataset e por classe.
+- Obs: nem todo churn é acionável (ex: mudança para área sem cobertura); o App não deve sugerir desconto nesse caso.
+- Obs: sentimento separa pouco churners de stayers (churners dizem "satisfied overall" e saem); temas são mais úteis.
+- D: `prediction.csv` = probabilidade de churn por cliente (assumido), o que permite definir cortes/thresholds diversos depois.
+- D: Riscos de prazo aceitos pelo time (deploy tarde, empacotamento do modelo, corte de commits, data da apresentação): o cronograma é apertado e será cumprido correndo.
+
+---
+
+### Reunião do time: 2026-11-07
+> 5PM–7PM \
+> Presentes: Bruno, Caroline, Maria Eduarda, Raquel, Thiago
+
+- **Objetivo**: modelo de probabilidade de churn (prioridade) + recomendações de negócio + solução ponta a ponta (dashboard onde se seleciona o cliente e vê probabilidade e recomendação). Não sugerir grandes descontos para quem já tem prob. muito alta.
+- D: GitHub como repositório central, documentação em `.md`, cada pessoa na sua branch/workspace.
+- D: Próxima reunião domingo 11/08 às 17h; meta: ao menos um modelo pronto.
+- D: Base de treino dividida em treino/teste com validação cruzada; base de inferência com a mesma estrutura, reaproveitando as transformações (ETL reutilizável).
+- D: Primeiro modelo com todas as variáveis (correlação baixa na maior parte); podar depois se necessário.
+- D: Codificação: gênero 0/1, pagamento em one-hot, flags `has_internet`/`has_phone`, "sem serviço" tratado como "não" nas colunas de produtos.
+- D: Comparar regressão logística com modelos de árvore/ensemble; justificar a escolha por métricas.
+- D: Levar dúvidas de negócio ao Carlos após a EDA.
+- Verificado: todo cliente sem internet aparece como "sem serviço de internet" em todas as colunas de produtos (sem inconsistência).
+- Q: Imputação em produção: calcular com dados de treino; regra padrão para nulos na inferência (numéricas média/zero, categóricas moda). Descartar cliente não é opção.
+- Q: Tenure em grupos (novos/médios/antigos) com modelos separados, ou contínuo? Em aberto.
+- Q: Balanceamento de classes? Depende da EDA.
+- Q: Corte do modelo (top 20, > 90%?) e métricas de seleção. Em aberto.
+- Q: Por que clientes ficam no plano mensal? (falha em oferecer plano longo, preferência por não ficar preso, multa?) Perguntar ao Carlos.
+- Q: Quem faz o deploy do App e em qual conta (limite de 1 app por conta)? Em aberto.
+
+
 
 - Quantidade de linhas dos arquivos vs slide introdutório:
     - `history.csv` 5634 / 5912 *(-278)*
@@ -93,22 +161,18 @@
         - Q: Qual valor imputar? Média? Regressão Linear para estimar baseado em outras variáveis?
         - Q: Remoção pode ser uma opção?
             - A: Se quisermos escorar todos os clientes e manter essa base o ideal não seria remover, pois se esse cliente ligar não teremos a probabilidade de churn já calulada e não teriamos a melhor abordagem para manter o cliente.
-
-
     - `tenure` variável numérica com uma categoria "unknown".
         - Q: O que fazer quando não temos quanto tempo o cliente está na base?
             - A: Como também é numerica, e ela é altamente correlacionada com `TotalCharges`, podemos tentar Regressão Linear.
         - Q: Podemos usar como categoria para ter modelos diferentes para clientes Novos/Antigos?
         - Q: Pode ser útil após uam analise de sentimento sobre porque pessoas em diferentes períodos decidem cancelar.
-
-
     - `PhoneService` variável categorica com 4 categorias: Yes/No/yes/no
         - D: Correct spelling to transform into binary.
         - Q: Note that we don't have "No phone servive" as a category.
-
     - `CustomerFeedback` variável de texto podendo ser útil para definir o porquê o consumidor decidiu sair.
         - Q: Análise de sentimento para criar possíveis categorias do porquê do churn.
 
+---
 
 <br>
 
@@ -116,6 +180,6 @@
     - A companhia oferece pelo menos 2 serviços: **internet** ou **phone**, e podemos ter clientes com somente 1 ou os dois.
         - Q: Definir quais variáveis são de qual serviço para tentar resolver as categorias "No phone service" / "No internet service".  Assim podemos criar uma variável para para clientes com telefone (binária), outra para clientes com intenet (binária) e verificar se "No phone service" é consistente com clientes que não tem linha de telefone.
 
-    - 
+
 
         
