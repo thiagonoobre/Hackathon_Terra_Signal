@@ -6,6 +6,7 @@ Organizing files in this folder with a short fdescription what they have been us
 2. [02_EDA_and_data_audit (inference).ipynb](#02_eda_and_data_audit-inferenceipynb)
 3. [03_sql_checks](#03_sql_checksipynb)
 4. [04_Feature_Store](#04_Feature_Storeipynb)
+5. [05_ABT1_TotalCharg](#05_ABT1_TotalChargipynb)
 
 ---
 
@@ -23,4 +24,6 @@ Running some SQL queries in both **train** and **inference** checking how tables
 ## 04_Feature_Store.ipynb
 Main document to create feature store.
 
-## 05_Feature_Store.ipynb
+## 05_ABT1_TotalCharges.ipynb
+Creation of a Linear Regression/Ridge model imputer for TotalCharges.
+
