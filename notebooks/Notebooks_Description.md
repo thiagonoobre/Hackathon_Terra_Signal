@@ -22,3 +22,5 @@ Running some SQL queries in both **train** and **inference** checking how tables
 
 ## 04_Feature_Store.ipynb
 Main document to create feature store.
+
+## 05_Feature_Store.ipynb
