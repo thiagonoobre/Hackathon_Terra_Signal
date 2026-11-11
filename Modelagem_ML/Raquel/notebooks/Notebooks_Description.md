@@ -6,7 +6,8 @@ Organizing files in this folder with a short fdescription what they have been us
 2. [02_EDA_and_data_audit (inference).ipynb](#02_eda_and_data_audit-inferenceipynb)
 3. [03_sql_checks](#03_sql_checksipynb)
 4. [04_Feature_Store](#04_Feature_Storeipynb)
-5. [05_ABT1_TotalCharg](#05_ABT1_TotalChargipynb)
+5. [05_ABT1_TotalCharges](#05_ABT1_TotalChargesipynb)
+6. [06_ABT2_Churn](#06_ABT2_Churnipynb)
 
 ---
 
@@ -27,3 +28,5 @@ Main document to create feature store.
 ## 05_ABT1_TotalCharges.ipynb
 Creation of a Linear Regression/Ridge model imputer for TotalCharges.
 
+## 06_ABT2_Churn.ipynb
+Creation of Classification Models to predict churn.
