@@ -6,12 +6,12 @@ This directory documents the data sources used throughout the project. Per proje
 
 ## 1. Primary Data Sources
 
-Both datasets reside at the project root:
+Both datasets reside directly in this directory (`06_data/`):
 
 | Dataset | Relative Path | Size | Description |
 |---|---|---|---|
-| **Training History** | `../../history.csv` | ~3.42 MB | Historical telecom customer churn data used for exploratory analysis, feature store engineering, imputer training, and churn model training (5,634 rows ingested / 5,912 raw). |
-| **Inference Set** | `../../inference.csv` | ~852 KB | Unlabeled customer cohort for production scoring (1,409 rows ingested / 1,461 raw). Contains leaked textual column `CustomerFeedback` which is strictly excluded from scoring features. |
+| **Training History** | `history.csv` | ~3.42 MB | Historical telecom customer churn data used for exploratory analysis, feature store engineering, imputer training, and churn model training (5,634 rows ingested / 5,912 raw). |
+| **Inference Set** | `inference.csv` | ~852 KB | Unlabeled customer cohort for production scoring (1,409 rows ingested / 1,461 raw). Contains leaked textual column `CustomerFeedback` which is strictly excluded from scoring features. |
 
 ---
 
