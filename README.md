@@ -1,35 +1,39 @@
-# Customer Churn Prediction & Retention System
+# Sistema de Previsão de Churn e Retenção de Clientes
+
 ## Equipe (Grupo 3)
-- **Caroline Targino** (Madu & Carol: Databricks Dashboard & Business Layer)
-- **Maria Eduarda Santos** (Madu & Carol: Databricks Dashboard & Business Layer)
-- **Raquel Marques** (Databricks Pipelines, Feature Store & MLflow Champion Models)
-- **Thiago Nobrega** (NLP Sentiment & Feedback Thematic Analysis)
-- **Bruno Camera** (Classical Statistics, Exploratory Data Analysis & Benchmark Validation)
+
+- **Caroline Targino** (Madu & Carol: Dashboard no Databricks e Camada de Negócio)
+- **Maria Eduarda Santos** (Madu & Carol: Dashboard no Databricks e Camada de Negócio)
+- **Raquel Marques** (Pipelines no Databricks, Feature Store e Modelos Campeões no MLflow)
+- **Thiago Nobrega** (Análise de Sentimentos com NLP e Análise Temática de Feedbacks)
+- **Bruno Camera** (Estatística Clássica, Análise Exploratória de Dados e Validação de Benchmarks)
 
 ---
 
-## 1. Project Overview & Context
+## 1. Visão Geral e Contexto do Projeto
+
+Este repositório consolida duas frentes analíticas desenvolvidas em paralelo para o projeto **Hackathon de Previsão de Churn de Clientes de Telecomunicações**:
 
 This repository consolidates two parallel analytical workstreams for the Telecom Customer Churn Hackathon project:
 1. **Classical Statistical Exploration & Local Validation Layer**.
 2. **Production Delta Lake & Databricks MLflow Architecture**.
 
-The primary goal is to predict customer churn (`TargetChurn`), impute missing accounting metrics (`TotalCharges`), score unlabelled production inference data (`inference.csv`), and output targeted retention recommendations as outlined in [ProjectPlan.md](./ProjectPlan.md).
+O objetivo principal é prever o cancelamento de clientes (*churn*, representado pela variável `TargetChurn`), imputar métricas financeiras ausentes (`TotalCharges`), gerar previsões para dados de produção sem rótulos (`inference.csv`) e fornecer recomendações direcionadas de retenção, conforme estabelecido no [Plano do Projeto](./ProjectPlan.md).
 
 ---
 
-## 2. Workstream Integration & Relationship
+## 2. Integração e Relação entre as Frentes de Trabalho
 
 ```mermaid
 flowchart TD
-    subgraph Data Sources
-        H["history.csv (5,634 rows)"]
-        I["inference.csv (1,409 rows)"]
+    subgraph "Fontes de Dados"
+        H["history.csv (5.634 registros)"]
+        I["inference.csv (1.409 registros)"]
     end
 
     subgraph "01_analysis (Classic Stats' Workstream)"
         EDA["01_statistical_eda_and_benchmarks.ipynb"]
-        EDA --> |Local 7-Model Benchmark & Statistical Significance| COMP["Statistical Baseline & Validation"]
+        EDA --> |Benchmark local de 7 modelos e significância estatística| COMP["Baseline Estatístico e Validação"]
     end
 
     subgraph "02_etl_and_features (ML's Workstream)"
@@ -38,58 +42,60 @@ flowchart TD
         ETL --> FS["04_feature_store.ipynb & SQL Tables"]
     end
 
-    subgraph "03_modeling (Production ML Pipelines)"
-        FS --> TR1["Track 1: TotalCharges Imputation (Ridge Champion)"]
-        TR1 --> TR2["Track 2: Churn Classification (LightGBM Champion)"]
+    subgraph "03_modeling (Pipelines de ML em Produção)"
+        FS --> TR1["Etapa 1: Imputação de TotalCharges (Ridge Campeão)"]
+        TR1 --> TR2["Etapa 2: Classificação de Churn (LightGBM Campeão)"]
     end
 
-    subgraph "04_inference & 05_outputs"
+    subgraph "04_inference e 05_outputs"
         TR2 --> INF["09.1_prediction_churn.ipynb"]
         INF --> PRED["prediction_Grupo3_...csv / predictionScore_Grupo3_...csv"]
         TR2 --> OUT["df_importances.csv"]
     end
 
-    COMP -.-> |Cross-validates performance| TR2
+    COMP -.-> |Validação cruzada de desempenho| TR2
 ```
 
-### Architectural Role of Each Workstream:
-- **Leading / Primary Track (Raquel)**: Full end-to-end cloud pipeline executed in Databricks Unity Catalog, using Delta Lake tables, Feature Store SQL queries, MLflow experiment tracking, and model registration (`@champion`).
-- **Validation & Statistical Layer (Bruno)**: Rigorous exploratory analysis, correlation and hypothesis testing, and single-node Scikit-Learn cross-validation benchmarks that confirm the feature dynamics and serve as an independent validation anchor.
+### Papel Arquitetural de Cada Frente de Trabalho
+
+- **Frente Principal (Raquel):** Pipeline completo de ponta a ponta, executado em ambiente de nuvem no Databricks Unity Catalog, utilizando tabelas Delta Lake, consultas SQL para Feature Store, rastreamento de experimentos no MLflow e registro de modelos campeões (`@champion`).
+
+- **Camada Estatística e de Validação (Bruno):** Análise exploratória rigorosa, testes de correlação e hipóteses, além de benchmarks com validação cruzada utilizando Scikit-Learn em ambiente local. Essa frente confirma os padrões identificados nas variáveis e funciona como uma referência independente para validação dos resultados.
 
 ---
 
-## 3. Directory Layout & Navigation
+## 3. Estrutura de Diretórios e Navegação
 
 ```text
 ./
-├── README.md                           # Master documentation (this file)
-├── ProjectPlan.md                      # Source of truth project roadmap and checklist
-├── 01_analysis/                        # Bruno's Classical Statistical & Local Benchmark Layer
-│   └── 01_statistical_eda_and_benchmarks.ipynb   (EDA, correlation, statistical rules, 7-model CV)
-├── 02_etl_and_features/                # Data Hygiene & Unity Catalog Feature Store
+├── README.md                                         # Documentação principal (este arquivo)
+├── ProjectPlan.md                                    # Plano oficial do projeto e checklist
+├── 01_analysis/                                      # Análise Estatística Clássica e Benchmarks Locais (Bruno)
+│   └── 01_statistical_eda_and_benchmarks.ipynb       (EDA, correlação, regras estatísticas e validação cruzada de 7 modelos)
+├── 02_etl_and_features/                              # Tratamento de Dados e Feature Store no Unity Catalog
 │   ├── notebooks/
-│   │   ├── 01_eda_data_audit_train.ipynb         (Training data profiling & churn rate deciles)
-│   │   ├── 02_eda_data_audit_inference.ipynb     (Inference data drift & schema alignment)
-│   │   ├── 03_etl_sql.ipynb                      (Databricks SQL hygiene & train_silver)
-│   │   └── 04_feature_store.ipynb                (Delta Feature & Target Store materialization)
+│   │   ├── 01_eda_data_audit_train.ipynb             (Perfil dos dados de treino e decis das taxas de churn)
+│   │   ├── 02_eda_data_audit_inference.ipynb         (Drift nos dados de inferência e alinhamento de esquema)
+│   │   ├── 03_etl_sql.ipynb                          (Tratamento de dados em SQL no Databricks e train_silver)
+│   │   └── 04_feature_store.ipynb                    (Materialização das tabelas Delta de variáveis e alvos)
 │   └── sql/
-│       ├── feature_store.sql                     (Standardized feature transformations)
-│       ├── target_store.sql                      (Target Churn and TotalCharges tables)
-│       └── target_store_inference.sql            (Inference target store setup)
-├── 03_modeling/                        # Databricks MLflow Modeling Workflows
-│   ├── 01_totalcharges_imputer/        # Track 1: TotalCharges Missingness Imputer
-│   │   ├── 05.0_abt1_totalcharges.ipynb          (ABT 1 assembly & VIF/correlation screens)
-│   │   ├── 06.0_train1_totalcharges.ipynb        (OLS vs Ridge regressor training)
-│   │   ├── 06.1_champion_totalcharges.ipynb      (MLflow champion imputer registration)
-│   │   └── analysis_abt1_totalcharges.ipynb      (Diagnostic residual analysis)
-│   └── 02_churn_classification/        # Track 2: Churn Classification Benchmarks
-│       ├── 07.0_abt2_churn.ipynb                 (ABT 2 assembly with imputer model integration)
-│       ├── 08.0_train2_churn.ipynb               (Benchmark of 7 ML algorithms with CV)
-│       └── 08.1_champion_churn.ipynb             (Hyperparameter-tuned LightGBM champion)
-├── 04_inference/                       # Scoring Engine & Deliverables
+│       ├── feature_store.sql                         (Transformações padronizadas das variáveis)
+│       ├── target_store.sql                          (Tabelas-alvo de Churn e TotalCharges)
+│       └── target_store_inference.sql                (Configuração da tabela-alvo para inferência)
+├── 03_modeling/                                      # Fluxos de Modelagem com Databricks e MLflow
+│   ├── 01_totalcharges_imputer/                      # Etapa 1: Imputação de Valores Ausentes em TotalCharges
+│   │   ├── 05.0_abt1_totalcharges.ipynb              (Construção da ABT 1 e análises de VIF/correlação)
+│   │   ├── 06.0_train1_totalcharges.ipynb            (Treinamento de regressões OLS e Ridge)
+│   │   ├── 06.1_champion_totalcharges.ipynb          (Registro do modelo campeão de imputação no MLflow)
+│   │   └── analysis_abt1_totalcharges.ipynb          (Análise diagnóstica dos resíduos)
+│   └── 02_churn_classification/                      # Etapa 2: Benchmarks de Classificação de Churn
+│       ├── 07.0_abt2_churn.ipynb                     (Construção da ABT 2 com integração do modelo de imputação)
+│       ├── 08.0_train2_churn.ipynb                   (Benchmark de 7 algoritmos de ML com validação cruzada)
+│       └── 08.1_champion_churn.ipynb                 (Modelo campeão LightGBM com hiperparâmetros otimizados)
+├── 04_inference/                                     # Motor de Predição e Entregáveis
 │   ├── notebooks/
-│   │   ├── 09.0_abt_inference.ipynb              (Inference feature assembly)
-│   │   └── 09.1_prediction_churn.ipynb           (Scoring pipeline & probability generation)
+│   │   ├── 09.0_abt_inference.ipynb                  (Construção das variáveis para inferência)
+│   │   └── 09.1_prediction_churn.ipynb               (Pipeline de predição e geração de probabilidades)
 │   └── predictions/
 │       ├── predictionScore_Group3_*.csv
 │       └── prediction_Grupo3_*.csv     # Deliverable
@@ -105,28 +111,53 @@ flowchart TD
 
 ---
 
-## 4. Synthesis of EDA & Key Analytical Findings
+## 4. Síntese da Análise Exploratória e Principais Descobertas
 
-Both workstreams conducted in-depth exploratory data analysis and reached unanimous conclusions on critical business patterns:
-1. **Contract Type is the Dominant Churn Driver**:
-   - Month-to-month (`M2M`) contracts exhibit ~43–50% churn rates, whereas 1-year and 2-year contracts drop churn below 11% and 3%, respectively.
-2. **Tenure & Customer Vulnerability**:
-   - Highest churn vulnerability occurs in the first 0–6 months of customer tenure.
-3. **Paperless Billing & Payment Methods**:
-   - Electronic check users churn at disproportionately higher rates compared to automatic bank transfers/credit cards.
-4. **Demographic Variables Have Negligible Signal**:
-   - `gender`, `SeniorCitizen`, `Partner`, and `Dependents` show minimal statistical divergence across churners vs non-churners.
+As duas frentes realizaram análises exploratórias aprofundadas dos dados (*Exploratory Data Analysis — EDA*) e chegaram a conclusões convergentes sobre os principais padrões de negócio.
+
+### 4.1. O Tipo de Contrato é o Principal Fator Associado ao Churn
+
+- Contratos mensais (`M2M`) apresentam taxas de churn entre **43% e 50%**.
+- Contratos de 1 ano apresentam taxas de churn inferiores a **11%**.
+- Contratos de 2 anos apresentam taxas de churn inferiores a **3%**.
+
+Esses resultados indicam uma forte associação entre a duração do compromisso contratual e a probabilidade de cancelamento.
+
+### 4.2. Tempo de Relacionamento e Vulnerabilidade dos Clientes
+
+- A maior vulnerabilidade ao churn ocorre nos primeiros **0 a 6 meses** de relacionamento do cliente com a empresa.
+
+Esse comportamento evidencia a importância de estratégias de retenção e acompanhamento durante os primeiros meses após a contratação.
+
+### 4.3. Faturamento Digital e Métodos de Pagamento
+
+- Clientes que utilizam cheque eletrônico apresentam taxas de churn desproporcionalmente maiores quando comparados àqueles que utilizam transferências bancárias automáticas ou cartões de crédito.
+
+Esse padrão sugere que o método de pagamento pode funcionar como um indicador relevante de risco de cancelamento.
+
+### 4.4. Variáveis Demográficas Apresentam Baixo Poder Preditivo
+
+As variáveis abaixo apresentam diferenças estatísticas pouco expressivas entre clientes que cancelaram e aqueles que permaneceram ativos:
+
+- `gender` — Gênero.
+- `SeniorCitizen` — Indicador de cliente idoso.
+- `Partner` — Presença de parceiro(a).
+- `Dependents` — Presença de dependentes.
+
+Os resultados indicam que essas características possuem sinal estatístico limitado quando analisadas individualmente.
 
 ---
 
-## 5. Methodological Differences & Contradictions (Review & Reconciliation)
+## 5. Diferenças Metodológicas e Divergências (Revisão e Conciliação)
 
-While both workstreams agree on the business signals, they made different technical decisions that have been reconciled as follows:
+Embora as duas frentes concordem sobre os principais padrões de negócio, algumas decisões técnicas foram diferentes ao longo do desenvolvimento.
 
-| Area | Stats Approach | ML Approach | Contradiction / Divergence Analysis | Final Resolution & Decision |
+As divergências foram analisadas e conciliadas conforme descrito a seguir.
+
+| Área | Abordagem Estatística | Abordagem de Machine Learning | Análise da Divergência | Resolução e Decisão Final |
 |---|---|---|---|---|
-| **Imputation of `TotalCharges`** | Deterministic business rule: `MonthlyCharges * tenure`. For `tenure == 0`, imputes with `MonthlyCharges`. | ML Imputer: Trains and registers a tuned Ridge regression model (`@champion`) inside MLflow to predict missing values. | **Divergence**: Stats treats `TotalCharges` as roughly accumulated past billing, whereas ML models non-linear billing variations via regression. | **Keep Ridge imputer for production** because it integrates seamlessly into the Databricks MLflow pipeline. Stats' deterministic formula serves as an intuitive business baseline. |
-| **Treatment of `tenure == 'unknown'`** | Explores `TotalCharges / MonthlyCharges` to infer tenure, but leaves rows without full imputation in production pipeline. | SQL Hygiene: `TRY_CAST(tenure AS BIGINT)`, cleanly converting `'unknown'` to `NULL`, followed by median imputation in modeling transformers. | **Contradiction**: Inverting tenure from `TotalCharges` risks circular dependence when both are missing or noisy. | **ML's `TRY_CAST` + median imputer** is safer for production scoring to prevent infinite or negative tenure estimates. |
-| **Categorical Encoding** | Standard `pd.get_dummies` with `drop_first=False`, producing wide binary frames. | Custom SQL mapping + `feature_engine.encoding.OneHotEncoder(drop_last=True)` inside Scikit-Learn pipelines. | **Contradiction**: Retaining all dummy columns creates exact multicollinearity in linear models (Dummy Variable Trap). | **ML's approach (`drop_last=True`)** is mathematically correct for regression/linear baselines, and tree models are unaffected. |
-| **`CustomerFeedback` Target Leakage** | Explicitly dropped from ABT: `ABT.drop(columns=['CustomerFeedback'])`. | Explicitly excluded from feature store and prediction notebooks. | **Full Alignment**: Both identified that `CustomerFeedback` in `inference.csv` contains post-facto cancellation comments (e.g. "decided to cancel"), which would cause target leakage. | **Strictly excluded** from all modeling and scoring. |
-| **Algorithm Selection** | Evaluated 7 models; LightGBM and Logistic Regression achieved top ROC-AUC (~0.84). | Evaluated 7 models in MLflow; LightGBM achieved champion status (ROC-AUC ~0.844). | **Full Alignment**: Both independently concluded that LightGBM is the superior model. | **Consensus confirmed**: LightGBM is the definitive champion classifier. |
+| **Imputação de `TotalCharges`** | Regra determinística de negócio: `MonthlyCharges * tenure`. Quando `tenure == 0`, utiliza `MonthlyCharges` para imputação. | Modelo de imputação baseado em ML: treina e registra uma regressão Ridge otimizada (`@champion`) no MLflow para prever valores ausentes. | **Divergência:** a abordagem estatística considera `TotalCharges` como uma aproximação do faturamento acumulado, enquanto a abordagem de ML busca capturar variações no histórico de cobrança por meio de regressão. | **Manter o modelo Ridge em produção**, devido à sua integração com o pipeline Databricks e MLflow. A fórmula determinística da abordagem estatística permanece como baseline de negócio, de fácil interpretação. |
+| **Tratamento de `tenure == 'unknown'`** | Investiga a relação `TotalCharges / MonthlyCharges` para estimar o tempo de relacionamento, mas não realiza a imputação completa dessas linhas no pipeline de produção. | Tratamento em SQL com `TRY_CAST(tenure AS BIGINT)`, convertendo `'unknown'` em `NULL`, seguido de imputação pela mediana nos transformadores de modelagem. | **Divergência:** calcular `tenure` a partir de `TotalCharges` pode gerar dependência circular quando ambas as variáveis estão ausentes ou contêm ruídos. | **Adotar `TRY_CAST` + imputação pela mediana**, conforme a abordagem de ML, por oferecer maior segurança na predição em produção e evitar estimativas infinitas ou negativas de tempo de relacionamento. |
+| **Codificação de Variáveis Categóricas** | Utiliza `pd.get_dummies` com `drop_first=False`, gerando uma matriz ampla de variáveis binárias. | Utiliza mapeamentos SQL personalizados e `feature_engine.encoding.OneHotEncoder(drop_last=True)` dentro dos pipelines Scikit-Learn. | **Divergência:** manter todas as colunas dummy pode gerar multicolinearidade exata em modelos lineares (*Dummy Variable Trap*). | **Adotar a abordagem de ML (`drop_last=True`)**, matematicamente adequada para regressões e baselines lineares. Modelos baseados em árvores não são afetados da mesma maneira. |
+| **Vazamento da Variável-Alvo em `CustomerFeedback`** | Remove explicitamente a variável da ABT por meio de `ABT.drop(columns=['CustomerFeedback'])`. | Exclui explicitamente a variável da Feature Store e dos notebooks de predição. | **Alinhamento total:** ambas as frentes identificaram que `CustomerFeedback`, em `inference.csv`, contém comentários posteriores à decisão de cancelamento, como "decidiu cancelar", o que provocaria vazamento da variável-alvo (*target leakage*). | **Excluir rigorosamente `CustomerFeedback`** de todas as etapas de modelagem e geração de previsões. |
+| **Seleção de Algoritmos** | Avaliou 7 modelos; LightGBM e Regressão Logística apresentaram os melhores resultados de ROC-AUC (aproximadamente 0,84). | Avaliou 7 modelos utilizando MLflow; LightGBM foi selecionado como campeão, com ROC-AUC de aproximadamente 0,844. | **Alinhamento total:** ambas as frentes concluíram, de forma independente, que LightGBM apresentou o melhor desempenho. | **Consenso confirmado:** LightGBM é o classificador campeão definitivo do projeto. |
