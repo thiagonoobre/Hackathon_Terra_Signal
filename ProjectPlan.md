@@ -105,7 +105,8 @@
 
 ### 4. Apresentação
 
-- [ ] Definir narrativa: problema → dados → modelo → produto → impacto de negócio #presentation (due 11/11)
+- [x] Definir narrativa: problema → dados → modelo → produto → impacto de negócio #presentation (due 11/11)
+    - Estrutura acordada (DEC-014, Reunião 09/11): 10 slides (10 min), 3 min demo ao vivo no Databricks, 2 min de perguntas.
 - [ ] Montar slides (15 min, foco em negócio para banca mista) #presentation (due 11/11)
 - [ ] Preparar demo do App / Dashboard (roteiro de 2-3 min) #presentation (due 11/11)
 - [ ] Preparar respostas para perguntas prováveis (por que não Model Serving? por que Recall? como o time de vendas usa?) #presentation (due 11/11)
@@ -126,7 +127,37 @@
 
 > Q = Question |  A = Answer | D = Decision
 
-### Revisão do plano: 2026-11-08
+### Reunião do time: 2026-11-09
+> Duração: ~2h \
+> Presentes: Bruno, Caroline, Maria Eduarda, Raquel, Thiago
+
+- **Modelagem de TotalCharges (Raquel & Bruno):**
+  - D: Modelo Ridge (`alpha=100`, GridSearchCV) treinado e registrado como champion no MLflow ($R^2 \approx 0.999$, RMSE $\approx \$65$).
+  - D: Remoção de variáveis collineares mantendo correlação $\ge 0.15$; dominância de `TotalSpend` (99.9%) validada como física da cobrança (DEC-008).
+  - D: Nenhuma linha pode ser descartada na inferência (todos os 1.409 clientes precisam de score).
+- **Tratamento de Missing e Tenure:**
+  - D: Bruno validou `tenure = ROUND(TotalCharges / MonthlyCharges)`, resolvendo 18 dos 19 casos sem tenure.
+  - D: Para o caso de ausência dupla (linha 1097), usar mediana do contrato como placeholder temporário com flag, rodar o imputer Ridge e recalcular o tenure ao final (cascata sanduíche DEC-009).
+  - D: Prevenção de vazamento de dados (preocupação do Bruno resolvida em DEC-011): toda imputação encapsulada em `Pipeline` do Scikit-Learn com `FunctionTransformer`.
+- **Análise de Sentimento e Motivos de Churn (Thiago):**
+  - D: Classificador baseado em regras contrastivas (ponderação pós-"mas") extrai motivos: Rede (instabilidade + velocidade), Preço, Concorrente e Forma de Pagamento.
+  - D: `CustomerFeedback` e os motivos extraídos **NÃO** entram como features no modelo de churn (evita 99% de acurácia artificial por vazamento, DEC-001 / DEC-012).
+  - D: Ideia aceita de modelos especializados por motivo acionável (Preço, Concorrente, Pagamento) para guiar as ações do operador de retenção (DEC-013).
+  - Pendência: Raquel validar manualmente uma amostra de 30 feedbacks.
+- **Dashboard e Arquitetura no Databricks (Carol, Madu, Thiago):**
+  - D: Dashboard construído com Databricks SQL via tabelas/views no catálogo (sem campos calculados na ferramenta de BI).
+  - D: Visão por cliente (jornada/ID lookup): exibir forma de pagamento, tenure, monthly charges, score de churn e recomendação de ação.
+- **Estratégia da Apresentação (15 min):**
+  - D: 10 slides focados em decisões críticas (TotalCharges, cascata de tenure, governança de vazamento), 3 min de demo ao vivo do app/dashboard e 2 min de Q&A (DEC-014).
+  - D: Slide dedicado à estrutura da ABT (requisito dos avaliadores) e gráfico de feature importance focado no top 10.
+- **Organização do Repositório:**
+  - D: Entrega em repositório único centralizado na `main`, pastas organizadas por frente (modelos, sentimento, dashboard, documentação).
+
+---
+
+### Reunião do time: 2026-11-08
+> Duração: ~2h \
+> Presentes: Bruno, Caroline, Raquel, Thiago
 
 - D: `CustomerFeedback_adj` tratado como **vazamento**: nos exemplos, o comentário declara o desfecho ("decided to churn", "recently canceled" vs. "no plans to switch") e repete dados tabulares (tenure, `MonthlyCharges`, pagamento, internet, contrato). Um comentário (provavelmente da inferência) também declara o cancelamento. Fica fora do modelo de churn e do App; uso apenas descritivo (temas/motivos).
     - A confirmar com SQL: taxa de frases de saída/permanência por dataset e por classe.
@@ -138,7 +169,7 @@
 ---
 
 ### Reunião do time: 2026-11-07
-> 5PM–7PM \
+> Duração: ~2h \
 > Presentes: Bruno, Caroline, Maria Eduarda, Raquel, Thiago
 
 - **Objetivo**: modelo de probabilidade de churn (prioridade) + recomendações de negócio + solução ponta a ponta (dashboard onde se seleciona o cliente e vê probabilidade e recomendação). Não sugerir grandes descontos para quem já tem prob. muito alta.
