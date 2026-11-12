@@ -11,8 +11,8 @@
 ## 1. Project Overview & Context
 
 This repository consolidates two parallel analytical workstreams for the Telecom Customer Churn Hackathon project:
-1. **Classical Statistical Exploration & Local Validation Layer** (developed by Bruno).
-2. **Production Delta Lake & Databricks MLflow Architecture** (developed by Raquel).
+1. **Classical Statistical Exploration & Local Validation Layer**.
+2. **Production Delta Lake & Databricks MLflow Architecture**.
 
 The primary goal is to predict customer churn (`TargetChurn`), impute missing accounting metrics (`TotalCharges`), score unlabelled production inference data (`inference.csv`), and output targeted retention recommendations as outlined in [ProjectPlan.md](./ProjectPlan.md).
 
@@ -27,12 +27,12 @@ flowchart TD
         I["inference.csv (1,409 rows)"]
     end
 
-    subgraph "01_analysis (Bruno's Workstream)"
+    subgraph "01_analysis (Classic Stats' Workstream)"
         EDA["01_statistical_eda_and_benchmarks.ipynb"]
         EDA --> |Local 7-Model Benchmark & Statistical Significance| COMP["Statistical Baseline & Validation"]
     end
 
-    subgraph "02_etl_and_features (Raquel's Workstream)"
+    subgraph "02_etl_and_features (ML's Workstream)"
         H & I --> AUDIT["01 & 02 EDA Data Audit"]
         AUDIT --> ETL["03_etl_sql.ipynb & train_silver"]
         ETL --> FS["04_feature_store.ipynb & SQL Tables"]
@@ -45,7 +45,7 @@ flowchart TD
 
     subgraph "04_inference & 05_outputs"
         TR2 --> INF["09.1_prediction_churn.ipynb"]
-        INF --> PRED["prediction_Gt_...csv / predictionPCT_...csv"]
+        INF --> PRED["prediction_Grupo3_...csv / predictionScore_Grupo3_...csv"]
         TR2 --> OUT["df_importances.csv"]
     end
 
@@ -91,9 +91,9 @@ flowchart TD
 │   │   ├── 09.0_abt_inference.ipynb              (Inference feature assembly)
 │   │   └── 09.1_prediction_churn.ipynb           (Scoring pipeline & probability generation)
 │   └── predictions/
-│       ├── predictionPCT_Group3_20261112_052957.csv
-│       └── prediction_Gt_20261112_052538.csv
-├── 05_outputs/                         # Deliverable Artifacts & Documentation
+│       ├── predictionScore_Group3_*.csv
+│       └── prediction_Grupo3_*.csv     # Deliverable
+├── 05_test_outputs/                    # Tests
 │   ├── df_importances.csv                        (Champion model feature importances)
 │   └── Notebooks_Description.md                  (Databricks notebook index and metadata)
 ├── 06_data/                            # Data References & Dictionaries
