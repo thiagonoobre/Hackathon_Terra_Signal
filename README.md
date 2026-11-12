@@ -14,8 +14,9 @@
 
 Este repositório consolida duas frentes analíticas desenvolvidas em paralelo para o projeto **Hackathon de Previsão de Churn de Clientes de Telecomunicações**:
 
-1. **Análise Estatística Clássica e Camada de Validação Local** (desenvolvida por Bruno).
-2. **Arquitetura de Produção com Delta Lake, Databricks e MLflow** (desenvolvida por Raquel).
+This repository consolidates two parallel analytical workstreams for the Telecom Customer Churn Hackathon project:
+1. **Classical Statistical Exploration & Local Validation Layer**.
+2. **Production Delta Lake & Databricks MLflow Architecture**.
 
 O objetivo principal é prever o cancelamento de clientes (*churn*, representado pela variável `TargetChurn`), imputar métricas financeiras ausentes (`TotalCharges`), gerar previsões para dados de produção sem rótulos (`inference.csv`) e fornecer recomendações direcionadas de retenção, conforme estabelecido no [Plano do Projeto](./ProjectPlan.md).
 
@@ -30,15 +31,15 @@ flowchart TD
         I["inference.csv (1.409 registros)"]
     end
 
-    subgraph "01_analysis (Frente de trabalho do Bruno)"
+    subgraph "01_analysis (Classic Stats' Workstream)"
         EDA["01_statistical_eda_and_benchmarks.ipynb"]
         EDA --> |Benchmark local de 7 modelos e significância estatística| COMP["Baseline Estatístico e Validação"]
     end
 
-    subgraph "02_etl_and_features (Frente de trabalho da Raquel)"
-        H & I --> AUDIT["01 e 02 - Auditoria Exploratória dos Dados"]
-        AUDIT --> ETL["03_etl_sql.ipynb e train_silver"]
-        ETL --> FS["04_feature_store.ipynb e Tabelas SQL"]
+    subgraph "02_etl_and_features (ML's Workstream)"
+        H & I --> AUDIT["01 & 02 EDA Data Audit"]
+        AUDIT --> ETL["03_etl_sql.ipynb & train_silver"]
+        ETL --> FS["04_feature_store.ipynb & SQL Tables"]
     end
 
     subgraph "03_modeling (Pipelines de ML em Produção)"
@@ -48,7 +49,7 @@ flowchart TD
 
     subgraph "04_inference e 05_outputs"
         TR2 --> INF["09.1_prediction_churn.ipynb"]
-        INF --> PRED["prediction_Gt_...csv / predictionPCT_...csv"]
+        INF --> PRED["prediction_Grupo3_...csv / predictionScore_Grupo3_...csv"]
         TR2 --> OUT["df_importances.csv"]
     end
 
@@ -96,16 +97,16 @@ flowchart TD
 │   │   ├── 09.0_abt_inference.ipynb                  (Construção das variáveis para inferência)
 │   │   └── 09.1_prediction_churn.ipynb               (Pipeline de predição e geração de probabilidades)
 │   └── predictions/
-│       ├── predictionPCT_Group3_20261112_052957.csv
-│       └── prediction_Gt_20261112_052538.csv
-├── 05_outputs/                                        # Artefatos Entregáveis e Documentação
-│   ├── df_importances.csv                             (Importância das variáveis do modelo campeão)
-│   └── Notebooks_Description.md                       (Índice e metadados dos notebooks do Databricks)
-├── 06_data/                                           # Referências e Dicionários de Dados
-│   └── README.md                                      (Definições de esquema, padrões de dados ausentes e caminhos)
-└── _archive/                                          # Arquivos Obsoletos e Históricos
-    ├── README.md                                      (Registro de alterações e arquivamento)
-    └── analise_bruno_v1.ipynb                         (Versão inicial de 22 células da EDA do Bruno, substituída)
+│       ├── predictionScore_Group3_*.csv
+│       └── prediction_Grupo3_*.csv     # Deliverable
+├── 05_test_outputs/                    # Tests
+│   ├── df_importances.csv                        (Champion model feature importances)
+│   └── Notebooks_Description.md                  (Databricks notebook index and metadata)
+├── 06_data/                            # Data References & Dictionaries
+│   └── README.md                                 (Schema definitions, missingness patterns, paths)
+└── _archive/                           # Deprecated / Historical Files
+    ├── README.md                                 (Archival changelog)
+    └── analise_bruno_v1.ipynb                    (Superseded 22-cell draft of Bruno's EDA)
 ```
 
 ---
