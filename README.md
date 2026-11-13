@@ -12,11 +12,12 @@
 
 ## 1. Visão Geral e Contexto do Projeto
 
-Este repositório consolida duas frentes analíticas desenvolvidas em paralelo para o projeto **Hackathon de Previsão de Churn de Clientes de Telecomunicações**:
+Este repositório consolida três frentes analíticas desenvolvidas em paralelo para o projeto **Hackathon de Previsão de Churn de Clientes de Telecomunicações**:
 
-This repository consolidates two parallel analytical workstreams for the Telecom Customer Churn Hackathon project:
+This repository consolidates three parallel analytical workstreams for the Telecom Customer Churn Hackathon project:
 1. **Classical Statistical Exploration & Local Validation Layer**.
 2. **Production Delta Lake & Databricks MLflow Architecture**.
+3. **Camada de NLP de apoio ao operador** (`notebook_analytics/`): identifica no `CustomerFeedback` o motivo de insatisfação de cada cliente, fora do modelo de escoragem.
 
 O objetivo principal é prever o cancelamento de clientes (*churn*, representado pela variável `TargetChurn`), imputar métricas financeiras ausentes (`TotalCharges`), gerar previsões para dados de produção sem rótulos (`inference.csv`) e fornecer recomendações direcionadas de retenção, conforme estabelecido no [Plano do Projeto](./ProjectPlan.md).
 
@@ -53,7 +54,15 @@ flowchart TD
         TR2 --> OUT["df_importances.csv"]
     end
 
+    subgraph "notebook_analytics (Camada de NLP, fora da escoragem)"
+        H & I --> MC["motivos_cancelamento (regras: status e motivos)"]
+        MC --> PM["prob_motivos_feedback (TF-IDF + Regressão Logística por motivo)"]
+        PM --> TB["workspace.default.tbl_prop_feedback"]
+        MC --> VH["validacao_history (probabilidades out-of-fold no histórico)"]
+    end
+
     COMP -.-> |Validação cruzada de desempenho| TR2
+    TB -.-> |Motivo provável para o atendente| PRED
 ```
 
 ### Papel Arquitetural de Cada Frente de Trabalho
@@ -61,6 +70,8 @@ flowchart TD
 - **Frente Principal (Raquel):** Pipeline completo de ponta a ponta, executado em ambiente de nuvem no Databricks Unity Catalog, utilizando tabelas Delta Lake, consultas SQL para Feature Store, rastreamento de experimentos no MLflow e registro de modelos campeões (`@champion`).
 
 - **Camada Estatística e de Validação (Bruno):** Análise exploratória rigorosa, testes de correlação e hipóteses, além de benchmarks com validação cruzada utilizando Scikit-Learn em ambiente local. Essa frente confirma os padrões identificados nas variáveis e funciona como uma referência independente para validação dos resultados.
+
+- **Camada de NLP de Feedbacks (Thiago):** Lê o `CustomerFeedback` e devolve, para cada cliente, uma probabilidade por motivo de insatisfação (preço, concorrente, forma de pagamento e técnico), junto com o trecho do texto que a sustenta. **Não alimenta o modelo de churn**: é uma camada de apoio para o atendente saber por onde começar a conversa. Detalhes na seção 6.
 
 ---
 
@@ -104,6 +115,12 @@ flowchart TD
 │   └── Notebooks_Description.md                  (Databricks notebook index and metadata)
 ├── 06_data/                            # Data References & Dictionaries
 │   └── README.md                                 (Schema definitions, missingness patterns, paths)
+├── notebook_analytics/                 # Camada de NLP sobre CustomerFeedback (Thiago) — fora da escoragem
+│   ├── motivos_cancelamento                      (Regras: status_texto, motivos, trecho de evidência; define processar())
+│   ├── prob_motivos_feedback                     (4 modelos TF-IDF + Regressão Logística; escora o inference e grava tbl_prop_feedback)
+│   ├── validacao_history                         (Validação cruzada no histórico inteiro e tabela de probabilidades out-of-fold)
+│   ├── abt_feedback                              (Exploratório: TF-IDF, SVD e sentimento VADER/TextBlob; não usado no resultado final)
+│   └── modelos_motivos                           (Exploratório: motivo previsto por features tabulares; abordagem descartada)
 └── _archive/                           # Deprecated / Historical Files
     ├── README.md                                 (Archival changelog)
     └── analise_bruno_v1.ipynb                    (Superseded 22-cell draft of Bruno's EDA)
@@ -159,5 +176,63 @@ As divergências foram analisadas e conciliadas conforme descrito a seguir.
 | **Imputação de `TotalCharges`** | Regra determinística de negócio: `MonthlyCharges * tenure`. Quando `tenure == 0`, utiliza `MonthlyCharges` para imputação. | Modelo de imputação baseado em ML: treina e registra uma regressão Ridge otimizada (`@champion`) no MLflow para prever valores ausentes. | **Divergência:** a abordagem estatística considera `TotalCharges` como uma aproximação do faturamento acumulado, enquanto a abordagem de ML busca capturar variações no histórico de cobrança por meio de regressão. | **Manter o modelo Ridge em produção**, devido à sua integração com o pipeline Databricks e MLflow. A fórmula determinística da abordagem estatística permanece como baseline de negócio, de fácil interpretação. |
 | **Tratamento de `tenure == 'unknown'`** | Investiga a relação `TotalCharges / MonthlyCharges` para estimar o tempo de relacionamento, mas não realiza a imputação completa dessas linhas no pipeline de produção. | Tratamento em SQL com `TRY_CAST(tenure AS BIGINT)`, convertendo `'unknown'` em `NULL`, seguido de imputação pela mediana nos transformadores de modelagem. | **Divergência:** calcular `tenure` a partir de `TotalCharges` pode gerar dependência circular quando ambas as variáveis estão ausentes ou contêm ruídos. | **Adotar `TRY_CAST` + imputação pela mediana**, conforme a abordagem de ML, por oferecer maior segurança na predição em produção e evitar estimativas infinitas ou negativas de tempo de relacionamento. |
 | **Codificação de Variáveis Categóricas** | Utiliza `pd.get_dummies` com `drop_first=False`, gerando uma matriz ampla de variáveis binárias. | Utiliza mapeamentos SQL personalizados e `feature_engine.encoding.OneHotEncoder(drop_last=True)` dentro dos pipelines Scikit-Learn. | **Divergência:** manter todas as colunas dummy pode gerar multicolinearidade exata em modelos lineares (*Dummy Variable Trap*). | **Adotar a abordagem de ML (`drop_last=True`)**, matematicamente adequada para regressões e baselines lineares. Modelos baseados em árvores não são afetados da mesma maneira. |
-| **Vazamento da Variável-Alvo em `CustomerFeedback`** | Remove explicitamente a variável da ABT por meio de `ABT.drop(columns=['CustomerFeedback'])`. | Exclui explicitamente a variável da Feature Store e dos notebooks de predição. | **Alinhamento total:** ambas as frentes identificaram que `CustomerFeedback`, em `inference.csv`, contém comentários posteriores à decisão de cancelamento, como "decidiu cancelar", o que provocaria vazamento da variável-alvo (*target leakage*). | **Excluir rigorosamente `CustomerFeedback`** de todas as etapas de modelagem e geração de previsões. |
+| **Vazamento da Variável-Alvo em `CustomerFeedback`** | Remove explicitamente a variável da ABT por meio de `ABT.drop(columns=['CustomerFeedback'])`. | Exclui explicitamente a variável da Feature Store e dos notebooks de predição. | **Alinhamento total:** ambas as frentes identificaram que `CustomerFeedback`, em `inference.csv`, contém comentários posteriores à decisão de cancelamento, como "decidiu cancelar", o que provocaria vazamento da variável-alvo (*target leakage*). | **Excluir rigorosamente `CustomerFeedback`** de todas as etapas de modelagem e geração de previsões. O texto é usado apenas na camada de apoio ao operador (`notebook_analytics/`, seção 6), que não alimenta o modelo de churn. |
 | **Seleção de Algoritmos** | Avaliou 7 modelos; LightGBM e Regressão Logística apresentaram os melhores resultados de ROC-AUC (aproximadamente 0,84). | Avaliou 7 modelos utilizando MLflow; LightGBM foi selecionado como campeão, com ROC-AUC de aproximadamente 0,844. | **Alinhamento total:** ambas as frentes concluíram, de forma independente, que LightGBM apresentou o melhor desempenho. | **Consenso confirmado:** LightGBM é o classificador campeão definitivo do projeto. |
+
+---
+
+## 6. Camada de NLP: Motivos de Cancelamento no `CustomerFeedback`
+
+### 6.1. Objetivo e Relação com o Modelo de Churn
+
+O `CustomerFeedback` não pode entrar no modelo de churn: no histórico, 1.498 dos 1.504 clientes que cancelaram escrevem no texto que decidiram sair (vazamento da variável-alvo, seção 5). Ainda assim, o texto diz **por que** o cliente está insatisfeito.
+
+Esta camada transforma o feedback em uma **probabilidade por motivo**, entregue ao atendente junto com o score do modelo de churn. Ela não altera nem alimenta a escoragem.
+
+### 6.2. Como Funciona
+
+1. **Regras leem o texto** (`motivos_cancelamento`). O texto é dividido em trechos (frases e cortes em *but*, *however*, *while*). Um motivo só é marcado quando o mesmo trecho fala do assunto **e** reclama dele. Ex.: *"the monthly charges were too high"* = preço; *"charges were reasonable"* não conta. As regras também classificam o `status_texto` (declarou saída, insatisfeito, satisfeito).
+2. **As regras viram gabarito.** Cada cliente do histórico recebe 0 ou 1 em quatro motivos: `preco`, `concorrente`, `pagamento` e `tecnico` (instabilidade, velocidade ou falta de conexão).
+3. **Um modelo por motivo** (`prob_motivos_feedback`). TF-IDF (n-gramas de 1 a 3) + Regressão Logística com `class_weight="balanced"`. Palavras de decisão (*decided*, *churn*, *cancel*, *switch*...) são removidas do vocabulário, para o modelo aprender a queixa e não a decisão de sair.
+4. **Validação cruzada** (`StratifiedKFold`, 5 dobras). Cada cliente do histórico recebe a nota de um modelo que não viu o seu texto no treino (*out-of-fold*).
+5. **Escoragem do inference.** Os modelos treinados em todo o histórico geram `prob_preco`, `prob_concorrente`, `prob_pagamento`, `prob_tecnico`, `motivo_mais_provavel`, `prob_maxima`, `status_texto` e `trecho_evidencia`, gravados em `workspace.default.tbl_prop_feedback`.
+
+### 6.3. Ordem de Execução
+
+| Ordem | Notebook | Entrada | Saída |
+|---|---|---|---|
+| 1 | `motivos_cancelamento` | `history.csv`, `inference.csv` | Função `processar()` e colunas de status e motivos |
+| 2 | `prob_motivos_feedback` | `history.csv`, `inference.csv` | `workspace.default.tbl_prop_feedback` (inference) |
+| 3 | `validacao_history` | `history.csv` | Métricas de validação e `saida_hist` (probabilidades out-of-fold do histórico) |
+
+Os três notebooks trazem as regras embutidas e leem os CSVs com `multiLine=true` e `escape='"'`, obrigatórios porque o feedback contém quebras de linha. `abt_feedback` e `modelos_motivos` são registros exploratórios e não fazem parte do fluxo final.
+
+### 6.4. Resultados no Histórico (5.634 clientes)
+
+Validação cruzada, probabilidade comparada ao gabarito das regras:
+
+| Motivo | Textos com o motivo | AUC | Precisão (p > 0,5) | Cobertura (p > 0,5) |
+|---|---|---|---|---|
+| Preço | 807 | 0,987 | 0,85 | 0,92 |
+| Concorrente | 574 | 0,998 | 0,86 | 0,98 |
+| Pagamento | 541 | 0,993 | 0,91 | 0,95 |
+| Técnico | 872 | 0,981 | 0,79 | 0,92 |
+
+Entre os 1.504 clientes que cancelaram, com probabilidade acima de 0,7:
+
+| Motivo | Clientes | % dos churners | Perfil |
+|---|---|---|---|
+| Técnico | 837 | 56% | Clientes novos, mediana de 5 meses de casa |
+| Concorrente | 579 | 38% | Citam oferta melhor ou mais barata |
+| Preço | 563 | 37% | 87% fibra, mensalidade mediana de US$ 90 |
+| Pagamento | 452 | 30% | 98% pagam com cheque |
+
+- 91% dos churners (1.367) têm pelo menos um motivo identificado.
+- 50,5% citam dois ou mais motivos, por isso os percentuais somam mais de 100%.
+- Entre os 4.130 clientes que **não** cancelaram, 227 já mostram uma queixa (162 de preço, 60 de pagamento, 20 técnica). Concorrente não aparece nesse grupo: o tema só surge depois da decisão de sair.
+
+### 6.5. Limitações
+
+- **O modelo imita as regras.** As métricas medem a concordância com o gabarito das regras, não com um motivo validado por pessoas. Recomenda-se revisar manualmente uma amostra de ~30 clientes.
+- **Textos padronizados.** Os feedbacks desta base seguem um padrão muito regular. Comentários reais, mais curtos e informais, exigiriam revisar as listas de palavras.
+- **Momento do feedback.** Não se sabe se o texto é escrito antes ou depois do cancelamento. Se for sempre depois, a camada perde o caráter preventivo e serve apenas para diagnóstico.
