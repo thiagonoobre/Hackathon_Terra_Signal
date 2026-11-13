@@ -115,12 +115,20 @@ flowchart TD
 │   └── Notebooks_Description.md                  (Databricks notebook index and metadata)
 ├── 06_data/                            # Data References & Dictionaries
 │   └── README.md                                 (Schema definitions, missingness patterns, paths)
-├── notebook_analytics/                 # Camada de NLP sobre CustomerFeedback (Thiago) — fora da escoragem
-│   ├── motivos_cancelamento                      (Regras: status_texto, motivos, trecho de evidência; define processar())
-│   ├── prob_motivos_feedback                     (4 modelos TF-IDF + Regressão Logística; escora o inference e grava tbl_prop_feedback)
-│   ├── validacao_history                         (Validação cruzada no histórico inteiro e tabela de probabilidades out-of-fold)
-│   ├── abt_feedback                              (Exploratório: TF-IDF, SVD e sentimento VADER/TextBlob; não usado no resultado final)
-│   └── modelos_motivos                           (Exploratório: motivo previsto por features tabulares; abordagem descartada)
+├── 07_sentiment_analysis/              # Análise de Sentimentos e NLP sobre CustomerFeedback (Thiago)
+│   ├── validacao_history.py                      (Validação cruzada out-of-fold no histórico)
+│   └── notebook_analytics/                       (Rotinas de regras, modelos TF-IDF e documentação técnica)
+│       ├── motivos_cancelamento.py               (Regras lexicais: status, motivos e extração de trechos)
+│       ├── prob_motivos_feedback.py              (4 modelos TF-IDF + Regressão Logística para escoragem de texto)
+│       ├── abt_feedback.py                       (Análise exploratória de TF-IDF e sentimento)
+│       ├── modelos_motivos.py                    (Exploratório: relacionamento entre variáveis tabulares e motivos)
+│       └── Analise_Exploratoria.ipynb            (Notebook de exploração textual e validações)
+├── 08_churn_motive/                    # Modelagem Preditiva de Motivos de Churn & SHAP Explainability
+│   ├── 20.0_analysis_motives.ipynb               (Análise diagnóstica e regressões com interpretabilidade SHAP)
+│   ├── 20.1_shap_motives.ipynb                   (Treinamento e registro dos 4 regressores LightGBM no MLflow)
+│   ├── 21.0_score_churn_motives.ipynb            (Escoragem dos 4 motivos via modelos campeões em workspace.default.churn_motives)
+│   ├── manual_testing_view.ipynb                 (Visualização e testes manuais da tabela consolidada)
+│   └── prob_*_feature_importance.csv             (Importância e drivers de cada motivo extraídos via SHAP)
 └── _archive/                           # Deprecated / Historical Files
     ├── README.md                                 (Archival changelog)
     └── analise_bruno_v1.ipynb                    (Superseded 22-cell draft of Bruno's EDA)
@@ -236,3 +244,38 @@ Entre os 1.504 clientes que cancelaram, com probabilidade acima de 0,7:
 - **O modelo imita as regras.** As métricas medem a concordância com o gabarito das regras, não com um motivo validado por pessoas. Recomenda-se revisar manualmente uma amostra de ~30 clientes.
 - **Textos padronizados.** Os feedbacks desta base seguem um padrão muito regular. Comentários reais, mais curtos e informais, exigiriam revisar as listas de palavras.
 - **Momento do feedback.** Não se sabe se o texto é escrito antes ou depois do cancelamento. Se for sempre depois, a camada perde o caráter preventivo e serve apenas para diagnóstico.
+
+---
+
+## 7. Da Análise Textual à Ação de Negócio: Modelagem de Motivos e Interpretabilidade (`07_*` e `08_*`)
+
+Enquanto a **Seção 6** detalha a extração linguística a partir do `CustomerFeedback`, as pastas `07_sentiment_analysis/` e `08_churn_motive/` fecham o ciclo analítico respondendo à pergunta crítica de negócio: **como associar o perfil cadastral e de consumo do cliente aos motivos de insatisfação revelados pelo texto?**
+
+### 7.1. Conexão entre o Texto e os Dados Estruturados
+
+A camada de NLP gera a tabela `workspace.default.tbl_prop_feedback`, contendo as probabilidades de cada um dos quatro motivos (`prob_preco`, `prob_concorrente`, `prob_pagamento`, `prob_tecnico`) para os clientes com feedback disponível. 
+
+Na pasta `08_churn_motive/`, essas probabilidades são cruzadas com as variáveis comportamentais da ABT (`raw_abt2_churn`) para treinar modelos preditivos baseados exclusivamente nas variáveis tabulares de cadastro e serviços. Isso permite que a operação estime a propensão a cada motivo mesmo para clientes futuros ou em cenários onde não haja texto preenchido.
+
+### 7.2. Pipeline de Modelagem de Motivos (`08_churn_motive/`)
+
+1. **Análise Diagnóstica e SHAP (`20.0_analysis_motives.ipynb` e `20.1_shap_motives.ipynb`):**
+   - Treinamento de 4 regressores supervisionados LightGBM (um para cada motivo) utilizando 37 variáveis comportamentais e cadastrais (excluindo qualquer dado textual para evitar vazamento).
+   - Rastreamento dos experimentos e registro dos modelos no MLflow sob o namespace `workspace.default.motive_<motivo>@champion`.
+   - Utilização de valores de SHAP (*SHapley Additive exPlanations*) e gráficos *waterfall* para isolar o "DNA" de cada motivo de cancelamento.
+
+2. **Escoragem em Lote de Motivos (`21.0_score_churn_motives.ipynb`):**
+   - Execução pós-escoragem de churn (`10.0_batch_score_churn`).
+   - Aplica os quatro modelos campeões de motivos sobre toda a base escorada, persistindo as probabilidades resultantes na tabela Delta `workspace.default.churn_motives`.
+   - Controle de proveniência com hash seguro (`feature_digest`) e registro de data (`scored_at`), garantindo reprocessamento apenas quando as variáveis do cliente sofrerem alteração.
+
+### 7.3. Principais Drivers por Motivo (Interpretação de Negócio via SHAP)
+
+A análise com SHAP revelou padrões bem delimitados para cada insatisfação:
+
+- **Preço (`prob_preco`):** Fortemente impulsionado por `MonthlyCharges`, `TotalSpendPct` e `chargesPerService`. Clientes com pacotes de fibra óptica e mensalidades elevadas concentram essa queixa.
+- **Concorrente (`prob_concorrente`):** Associado a clientes com contratos mensais (`M2M`), ausência de serviços agregados de segurança/suporte e maior sensibilidade a ofertas do mercado.
+- **Pagamento (`prob_pagamento`):** Altamente correlacionado a faturamento em cheque eletrônico (`isPaymentMethod_ElectronicCheck`) e modalidades manuais de pagamento.
+- **Técnico (`prob_tecnico`):** Concentrado em clientes de início de relacionamento (`nbrTenure` baixo), com problemas recorrentes de suporte nos primeiros meses de ativação.
+
+Essas estimativas alimentam diretamente as ferramentas de suporte ao operador e dashboards, permitindo ações proativas de retenção direcionadas à raiz do problema.

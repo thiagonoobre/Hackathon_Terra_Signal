@@ -51,7 +51,7 @@
 - [x] Processar CustomerFeedback (TF-IDF + SVD ou features simples) #data (due 11/08)
     - [x] Teste de vazamento do `CustomerFeedback`: taxa de frases de saída/permanência em history (por `TargetChurn`) vs. inference (SQL) + AUC de modelo só-texto #data (due 11/08)
     - [x] Documentar no README e em 1 slide: `CustomerFeedback` fora do modelo de churn (vazamento: o comentário descreve o desfecho e não existiria para um cliente real no momento da ligação) #data (due 11/08)
-    - [ ] Extrair temas dos comentários / Análise de sentimento (Thiago) (preço/valor, concorrente, forma de pagamento, mudança de endereço, qualidade) e comparar churners vs. stayers; separar motivos acionáveis de não acionáveis #data (due 11/09)
+    - [x] Extrair temas dos comentários / Análise de sentimento (Thiago) (preço/valor, concorrente, forma de pagamento, mudança de endereço, qualidade) e comparar churners vs. stayers; separar motivos acionáveis de não acionáveis #data (due 11/09)
     - [x] Avaliar usar o texto para preencher os "unknown" de `tenure`: comparar tenure/`MonthlyCharges` citados no texto com as colunas onde ambos existem; só usar se concordarem #data (due 11/08)
 - [x] Split treino/validação estratificado + pipeline reprodutível (sklearn Pipeline) #data (due 11/08)
     - Imputação calculada só com dados de treino; regra padrão para nulos na inferência (numéricas: média/zero; categóricas: moda); mesmo código para treino e inferência
@@ -100,16 +100,16 @@
 - [x] (fallback) Notebook com widgets interativos caso o App falhe #delivery (due 11/10)
 - [x] README final: arquitetura, como rodar, decisões técnicas #delivery (due 11/12)
     - Consolidado em `ORGANIZED/README.md`.
-- [ ] (nice-to-have) API com Model Serving #delivery nice-to-have (só se sobrar tempo)
+- [x] (nice-to-have) API com Model Serving #delivery nice-to-have (só se sobrar tempo)
 - [ ] (nice-to-have) Chatbot com Genie/Custom Agents #delivery nice-to-have (só se sobrar tempo)
 
 ### 4. Apresentação
 
 - [x] Definir narrativa: problema → dados → modelo → produto → impacto de negócio #presentation (due 11/11)
     - Estrutura acordada (DEC-014, Reunião 09/11): 10 slides (10 min), 3 min demo ao vivo no Databricks, 2 min de perguntas.
-- [ ] Montar slides (15 min, foco em negócio para banca mista) #presentation (due 11/11)
+- [x] Montar slides (15 min, foco em negócio para banca mista) #presentation (due 11/11)
 - [ ] Preparar demo do App / Dashboard (roteiro de 2-3 min) #presentation (due 11/11)
-- [ ] Preparar respostas para perguntas prováveis (por que não Model Serving? por que Recall? como o time de vendas usa?) #presentation (due 11/11)
+- [x] Preparar respostas para perguntas prováveis (por que não Model Serving? por que Recall? como o time de vendas usa?) #presentation (due 11/11)
 - [ ] Ensaio cronometrado (15 min) #presentation (due 11/12)
 - [ ] Gravar vídeo backup da demo (caso o App caia na hora) #presentation (due 11/12)
 
@@ -117,8 +117,8 @@
 
 - [x] Revisar estrutura do repo (pastas, README, notebooks limpos) #infra (due 11/12)
     - Concluído com a estrutura padronizada em `ORGANIZED/`.
-- [ ] Garantir todos os commits antes de ==12/11 23:59== #infra (due 11/12)
-- [ ] Preencher Google Forms com link do repo + `prediction.csv` #infra (due 11/12)
+- [ ] Garantir todos os commits antes de ==13/11 10:00== #infra (due 11/12)
+- [x] Preencher Google Forms com link do repo + `prediction.csv` #infra (due 11/12)
 - [ ] Confirmar submissão (print/screenshot do Forms enviado) #infra (due 11/12)
 
 ---
